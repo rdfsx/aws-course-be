@@ -1,26 +1,11 @@
-const { S3Client, ListObjectsCommand } = require("@aws-sdk/client-s3");
-const mockedProducts = [
-  {
-    description: "Short Product Description1",
-    id: "1",
-    price: 24,
-    title: "ProductOne",
-  },
-  {
-    description: "Short Product Description7",
-    id: "2",
-    price: 15,
-    title: "ProductTitle",
-  },
-  {
-    description: "Short Product Description2",
-    id: "3",
-    price: 23,
-    title: "Product",
-  },
-];
+const AWS = require('aws-sdk');
 
-const s3Client = new S3Client({});
+AWS.config.update({
+    region: "eu-north-1",
+});
+
+const ddb = new AWS.DynamoDB({});
+
 
 const routeRequest = (lambdaEvent) => {
   if (lambdaEvent.httpMethod === "GET") {
@@ -37,24 +22,27 @@ const routeRequest = (lambdaEvent) => {
 const handleGetRequest = async (event) => {
     const productId = event.pathParameters.product_id;
 
-    const productFound = mockedProducts.find((p) => p.id === productId);
-    if (!productFound) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ message: "Product not found" }),
-      };
-    }
+    ddb.getItem({TableName: 'products', Key:{id: {S:productId}}}, function(err, data) {
+        const productFound = data;
+        if (!productFound) {
+          return {
+            statusCode: 404,
+            body: JSON.stringify({ message: "Product not found" }),
+          };
+        }
 
-  return {
-    statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Credentials': true,
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Methods': '*'
-      },
-    body: JSON.stringify(productFound)
-  };
+      return {
+        statusCode: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': true,
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Methods': '*'
+          },
+        body: JSON.stringify(productFound)
+      };
+    });
+
 };
 
 const buildResponseBody = (status, body, headers = {}) => {

@@ -1,27 +1,10 @@
-const { S3Client, ListObjectsCommand } = require("@aws-sdk/client-s3");
+const AWS = require('aws-sdk');
 
-const s3Client = new S3Client({});
+AWS.config.update({
+    region: "eu-north-1",
+});
 
-const mockedProducts = [
-  {
-    description: "Short Product Description1",
-    id: "1",
-    price: 24,
-    title: "ProductOne",
-  },
-  {
-    description: "Short Product Description7",
-    id: "2",
-    price: 15,
-    title: "ProductTitle",
-  },
-  {
-    description: "Short Product Description2",
-    id: "3",
-    price: 23,
-    title: "Product",
-  },
-];
+const ddb = new AWS.DynamoDB({});
 
 const routeRequest = (lambdaEvent) => {
   if (lambdaEvent.httpMethod === "GET") {
@@ -36,6 +19,19 @@ const routeRequest = (lambdaEvent) => {
 };
 
 const handleGetRequest = async () => {
+  let result = []
+  ddb.scan({TableName: 'products'}, function(err, data) {
+    data.Items.forEach(function(item) {
+        result.push(
+            {
+                description: item.description.S,
+                id: item.id.S,
+                price: Number(item.price.N),
+                title: item.title.S
+            }
+        );
+      });
+  });
 
   return {
     statusCode: 200,
@@ -45,7 +41,7 @@ const handleGetRequest = async () => {
         'Access-Control-Allow-Headers': '*',
         'Access-Control-Allow-Methods': '*'
       },
-    body: JSON.stringify(mockedProducts)
+    body: JSON.stringify(result)
   };
 };
 
