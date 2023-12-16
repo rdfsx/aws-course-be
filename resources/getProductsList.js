@@ -1,10 +1,8 @@
-const AWS = require('aws-sdk');
+const {DynamoDBClient} = require('@aws-sdk/client-dynamodb');
+const {DynamoDBDocumentClient, ScanCommand} = require('@aws-sdk/lib-dynamodb');
 
-AWS.config.update({
-    region: "eu-north-1",
-});
-
-const ddb = new AWS.DynamoDB({});
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
 
 const routeRequest = (lambdaEvent) => {
   if (lambdaEvent.httpMethod === "GET") {
@@ -20,18 +18,30 @@ const routeRequest = (lambdaEvent) => {
 
 const handleGetRequest = async () => {
   let result = []
-  ddb.scan({TableName: 'products'}, function(err, data) {
-    data.Items.forEach(function(item) {
+
+  const command = new ScanCommand({
+    TableName: "products"
+  });
+
+  const response = await docClient.send(command);
+
+  if (!response.Items) {
+          return {
+            statusCode: 404,
+            body: JSON.stringify({ message: "Product not found" }),
+          };
+        }
+
+  response.Items.forEach(function(item) {
         result.push(
             {
-                description: item.description.S,
-                id: item.id.S,
-                price: Number(item.price.N),
-                title: item.title.S
+                description: item.description,
+                id: item.id,
+                price: Number(item.price),
+                title: item.title
             }
         );
       });
-  });
 
   return {
     statusCode: 200,

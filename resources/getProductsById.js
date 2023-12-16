@@ -1,10 +1,8 @@
-const AWS = require('aws-sdk');
+const {DynamoDBClient} = require('@aws-sdk/client-dynamodb');
+const {DynamoDBDocumentClient, GetCommand} = require('@aws-sdk/lib-dynamodb');
 
-AWS.config.update({
-    region: "eu-north-1",
-});
-
-const ddb = new AWS.DynamoDB({});
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
 
 
 const routeRequest = (lambdaEvent) => {
@@ -22,16 +20,21 @@ const routeRequest = (lambdaEvent) => {
 const handleGetRequest = async (event) => {
     const productId = event.pathParameters.product_id;
 
-    ddb.getItem({TableName: 'products', Key:{id: {S:productId}}}, function(err, data) {
-        const productFound = data;
-        if (!productFound) {
+    const command = new GetCommand({
+      TableName: "products",
+      Key:{id: productId},
+    });
+
+    const productFound = await docClient.send(command);
+
+    if (!productFound) {
           return {
             statusCode: 404,
             body: JSON.stringify({ message: "Product not found" }),
           };
         }
 
-      return {
+    return {
         statusCode: 200,
           headers: {
             'Access-Control-Allow-Origin': '*',
@@ -41,8 +44,6 @@ const handleGetRequest = async (event) => {
           },
         body: JSON.stringify(productFound)
       };
-    });
-
 };
 
 const buildResponseBody = (status, body, headers = {}) => {
