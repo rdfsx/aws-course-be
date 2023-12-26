@@ -1,7 +1,7 @@
 const {DynamoDBClient} = require('@aws-sdk/client-dynamodb');
 const {DynamoDBDocumentClient, ScanCommand} = require('@aws-sdk/lib-dynamodb');
 
-const client = new DynamoDBClient({});
+const client = new DynamoDBClient({region: "eu-north-1"});
 const docClient = DynamoDBDocumentClient.from(client);
 
 const routeRequest = (lambdaEvent) => {
